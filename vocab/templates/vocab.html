@@ -80,14 +80,55 @@
 <br />
 <div class="row">
   <div class="col-xs-6 text-center">
-  <form id="entry" method="POST" action="/_check">
+  <form id="entry" method="POST" action="/_myCheck">
     <label for="attempt">Word:</label>
     <input id="attempt" name="attempt" type="text" width="15"
       autocomplete="off"  autofocus />
-    <input type="submit" name="try" />
   </form>
-</div></div>
+  </div></div>
+<p id="response"> </p>
+<script>
 
+// when the client presses a key
+$("#attempt").keyup(function(event) {
+   // Current content of the input field
+   var txt = $("#attempt").val();  
+   // The key that just went up
+   var keycode = event.which;      
+   var letter = String.fromCharCode(keycode);
+
+  // Prevent the submit function if the client presses the Enter key
+  $("#entry").submit( function(event) {
+     event.preventDefault();
+    });
+
+  if (! "ABCDEFGHIJKLMNOPQRSTUVWXYZ".includes(letter)) { return }
+
+     // From flask_vocab get the jsonify requests from /_myCheck
+     $.getJSON( "/_myCheck", { text: txt },
+                function(data) {
+                  rsval = data.result.complete_word;
+                  console.log("rsval: " + rsval)
+                  // If the word is in correct
+                  if (rsval) {
+                     // adds the word to the string at the bottom keeping track of correct words
+                     document.getElementById("response").innerHTML += ' ' + txt;
+                     $("#attempt").val("");
+                     // if the correct amount of words is found
+                     if (data.result.is_enough) {
+                        // redirect the page to the success page
+                        $(window.location).attr('href', '/success');
+                        }
+                  } else {
+                     $("#response").append(txt.length + " ");
+                     }
+                 }
+             );
+
+     }
+     );
+
+</script>
 <br />
 
 {% if session.matches|length is not equalto 0  %}

@@ -16,6 +16,7 @@ import config
 ###
 # Globals
 ###
+
 app = flask.Flask(__name__)
 
 CONFIG = config.configuration()
@@ -29,7 +30,6 @@ app.secret_key = CONFIG.SECRET_KEY  # Should allow using session variables
 # neither of which would be suitable for responding keystroke by keystroke.
 
 WORDS = Vocab(CONFIG.VOCAB)
-
 ###
 # Pages
 ###
@@ -68,69 +68,39 @@ def success():
 
 #######################
 # Form handler.
-# CIS 322 note:
-#   You'll need to change this to a
-#   a JSON request handler
 #######################
 
-
-@app.route("/_check", methods=["POST"])
-def check():
-    """
-    User has submitted the form with a word ('attempt')
-    that should be formed from the jumble and on the
-    vocabulary list.  We respond depending on whether
-    the word is on the vocab list (therefore correctly spelled),
-    made only from the jumble letters, and not a word they
-    already found.
-    """
+@app.route("/_myCheck")
+def myCheck():
+    flask.jsonify()
     app.logger.debug("Entering check")
-
     # The data we need, from form and from cookie
-    text = flask.request.form["attempt"]
+    text = flask.request.args.get("text", type=str)
     jumble = flask.session["jumble"]
+    # Make a list of the words the client has found
     matches = flask.session.get("matches", [])  # Default to empty list
-
     # Is it good?
     in_jumble = LetterBag(jumble).contains(text)
     matched = WORDS.has(text)
-
     # Respond appropriately
     if matched and in_jumble and not (text in matches):
         # Cool, they found a new word
+        app.logger.debug("Found Match")
         matches.append(text)
+        ie = False
         flask.session["matches"] = matches
-    elif text in matches:
-        flask.flash("You already found {}".format(text))
-    elif not matched:
-        flask.flash("{} isn't in the list of words".format(text))
-    elif not in_jumble:
-        flask.flash(
-            '"{}" can\'t be made from the letters {}'.format(text, jumble))
+        # If the correct amount of matches are found
+        if len(matches) >= CONFIG.SUCCESS_AT_COUNT:
+            ie = True
+        # Create a dict containing the completed word and a boolean on whether enough
+        # words have been found to redirect the client to the success page.
+        word_in_list = {"complete_word": True, "is_enough": ie}
+        # Send the dict to vocab.html
+        return flask.jsonify(result=word_in_list)
     else:
-        app.logger.debug("This case shouldn't happen!")
+        # Case for if the entry isn't a correct word.
+        app.logger.debug("Incorrect word has been entered")
         assert False  # Raises AssertionError
-
-    # Choose page:  Solved enough, or keep going?
-    if len(matches) >= flask.session["target_count"]:
-       return flask.redirect(flask.url_for("success"))
-    else:
-       return flask.redirect(flask.url_for("keep_going"))
-
-###############
-# AJAX request handlers
-#   These return JSON, rather than rendering pages.
-###############
-
-
-@app.route("/_example")
-def example():
-    """
-    Example ajax request handler
-    """
-    app.logger.debug("Got a JSON request")
-    rslt = {"key": "value"}
-    return flask.jsonify(result=rslt)
 
 
 #################
