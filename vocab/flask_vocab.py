@@ -6,6 +6,10 @@ from a scrambled string)
 
 import flask
 import logging
+# Had to import jinja2 to fix a pi error
+# https://stackoverflow.com/questions/8339899
+# /jinja2-custom-filter-templateassertionerror-no-filter-named-format-number
+import jinja2
 
 # Our own modules
 from letterbag import LetterBag
@@ -51,6 +55,10 @@ def index():
     app.logger.debug("At least one seems to be set correctly")
     return flask.render_template('vocab.html')
 
+# Solution to an exception I was getting on my pi
+# https://stackoverflow.com/questions/8339899
+# /jinja2-custom-filter-templateassertionerror-no-filter-named-format-number
+jinja2.filters.FILTERS['index'] = index
 
 @app.route("/keep_going")
 def keep_going():
